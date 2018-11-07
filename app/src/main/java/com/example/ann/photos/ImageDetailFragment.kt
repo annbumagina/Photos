@@ -15,8 +15,8 @@ import kotlinx.android.synthetic.main.activity_image_detail.*
 
 class ImageDetailFragment: Fragment() {
 
-    private lateinit var desc: String
-    private lateinit var link: String
+    private var desc: String? = null
+    private var link: String? = null
     private var i: Int = 0
     var binder: Loader2.MyBinder? = null
     val serviceConnection = object : ServiceConnection {
@@ -29,21 +29,24 @@ class ImageDetailFragment: Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val strtext = arguments!!.getString("edttext")
-        desc = arguments!!.getString(EXTRA_DESC)
-        link = arguments!!.getString(EXTRA_URL)
-        i = arguments!!.getInt(EXTRA_ID)
+        if (arguments != null) {
+            desc = arguments!!.getString(EXTRA_DESC)
+            link = arguments!!.getString(EXTRA_URL)
+            i = arguments!!.getInt(EXTRA_ID)
+        }
         return inflater.inflate(R.layout.activity_image_detail, container, false)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        textView2.text = desc
-        val intent2 = Intent(context, Loader2::class.java)
-        intent2.putExtra(EXTRA_ID, i)
-        intent2.putExtra(EXTRA_URL, link)
-        context!!.bindService(intent2, serviceConnection, Context.BIND_AUTO_CREATE)
-        context!!.startService(intent2)
+        if (desc != null) {
+            textView2.text = desc
+            val intent2 = Intent(context, Loader2::class.java)
+            intent2.putExtra(EXTRA_ID, i)
+            intent2.putExtra(EXTRA_URL, link)
+            context!!.bindService(intent2, serviceConnection, Context.BIND_AUTO_CREATE)
+            context!!.startService(intent2)
+        }
     }
 
     override fun onDestroy() {

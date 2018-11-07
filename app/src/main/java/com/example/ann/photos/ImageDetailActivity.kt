@@ -33,12 +33,14 @@ class ImageDetailActivity: AppCompatActivity() {
         Log.d(LOG_TAG, "onCreate Image Detail: ")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_image_detail)
-        textView2.text = intent.getStringExtra(EXTRA_DESC)
-        val intent2 = Intent(this, Loader2::class.java)
-        intent2.putExtra(EXTRA_ID, intent.getIntExtra(EXTRA_ID, 0))
-        intent2.putExtra(EXTRA_URL, intent.getStringExtra(EXTRA_URL))
-        bindService(intent2, serviceConnection, Context.BIND_AUTO_CREATE)
-        startService(intent2)
+        if (intent.getStringExtra(EXTRA_DESC) != null) {
+            textView2.text = intent.getStringExtra(EXTRA_DESC)
+            val intent2 = Intent(this, Loader2::class.java)
+            intent2.putExtra(EXTRA_ID, intent.getIntExtra(EXTRA_ID, 0))
+            intent2.putExtra(EXTRA_URL, intent.getStringExtra(EXTRA_URL))
+            bindService(intent2, serviceConnection, Context.BIND_AUTO_CREATE)
+            startService(intent2)
+        }
     }
 
     override fun onDestroy() {

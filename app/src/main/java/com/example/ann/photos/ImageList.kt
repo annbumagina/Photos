@@ -29,6 +29,7 @@ class ImageList: Fragment() {
     private val LOG_TAG = ImageList::class.java.simpleName
     var title: Array<String?> = arrayOfNulls(20)
     var links: Array<String?> = arrayOfNulls(20)
+    var have = false
     var description: Array<String?> = arrayOfNulls(20)
     var bind = false
     val onClick = { id: Int ->
@@ -73,7 +74,7 @@ class ImageList: Fragment() {
         Log.d(LOG_TAG, "onActivityCreated: ")
         recyclerView.layoutManager = LinearLayoutManager(context!!)
         recyclerView.adapter = adapter
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null || savedInstanceState.getStringArray(EXTRA_LIST) == null) {
             val intent = Intent(context, Loader::class.java)
             intent.putExtra(EXTRA_URL, "https://api.flickr.com/services/feeds/photos_public.gne?tags=people&tagmode=any&per_page=20&format=json")
             context!!.bindService(intent, serviceConnection, BIND_AUTO_CREATE);
@@ -85,13 +86,16 @@ class ImageList: Fragment() {
             for (i in 0 .. title.size - 1) {
                 adapter.setElement(i, title[i]!!)
             }
+            have = true
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putStringArray(EXTRA_LIST, title)
-        outState.putStringArray(EXTRA_URL, links)
-        outState.putStringArray(EXTRA_DESC, description)
+        if (have) {
+            outState.putStringArray(EXTRA_LIST, title)
+            outState.putStringArray(EXTRA_URL, links)
+            outState.putStringArray(EXTRA_DESC, description)
+        }
         Log.d(LOG_TAG, "onSaveInstanceState: ")
         super.onSaveInstanceState(outState)
     }
@@ -107,6 +111,7 @@ class ImageList: Fragment() {
             title[i] = oneObject.getString("title")
             adapter.setElement(i, title[i]!!)
         }
+        have = true
     }
 
     override fun onDestroy() {
