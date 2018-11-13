@@ -9,11 +9,18 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
-import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import android.os.HandlerThread
 import android.util.LruCache
+import android.R.attr.path
+import android.content.Context
+import android.content.Context.MODE_PRIVATE
+import android.content.ContextWrapper
+import java.io.*
+import java.nio.file.Files.delete
+
+
 
 
 class Loader2 : Service() {
@@ -22,12 +29,38 @@ class Loader2 : Service() {
     private var mHandler: Handler? = null
     private val main = Handler(Looper.getMainLooper())
     private lateinit var callback: (Bitmap) -> Unit
+    private var directory: File? = null
     //private var images: Array<Bitmap?> = arrayOfNulls(20)
 
-    val cacheSize = 2 * 10 * 1024 * 1024; // 4MiB
+    val cacheSize = 2 * 10 * 1024 * 1024;
     var images = object : LruCache<Int, Bitmap>(cacheSize) {
         override fun sizeOf(key: Int, bitmap: Bitmap): Int {
             return bitmap.byteCount
+        }
+
+        override fun entryRemoved(evicted: Boolean, key: Int?, oldValue: Bitmap?, newValue: Bitmap?) {
+            super.entryRemoved(evicted, key, oldValue, newValue)
+            if (directory == null) {
+                val cw = ContextWrapper(applicationContext)
+                directory = cw.getDir("imageDir", Context.MODE_PRIVATE)
+                for (i in 0 .. 19) {
+                    File(directory, i.toString() + ".jpg").delete()
+                }
+            }
+            val mypath = File(directory, key?.toString() + ".jpg")
+            mHandler?.post {
+                var fos: FileOutputStream? = null
+                try {
+                    fos = FileOutputStream(mypath)
+                    oldValue?.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+                } catch (e: Exception) {
+                } finally {
+                    try {
+                        fos!!.close()
+                    } catch (e: IOException) {
+                    }
+                }
+            }
         }
     }
 
@@ -43,15 +76,29 @@ class Loader2 : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(LOG_TAG, "onStartCommand: " + intent!!.getIntExtra(EXTRA_ID, 0) + ' ' + intent.getStringExtra(EXTRA_URL))
+        Log.d(LOG_TAG, "onStartCommand: " + (intent == null))
+        if (intent == null) {
+            return super.onStartCommand(intent, Service.START_REDELIVER_INTENT, startId);
+        }
         val id = intent.getIntExtra(EXTRA_ID, 0)
         var bmp = images.get(id)
         if (bmp == null) {
             val path = intent.getStringExtra(EXTRA_URL)
             mHandler?.post {
-                val url = URL(path)
-                url.openConnection()
-                bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                if (directory != null) {
+                    val f = File(directory, id.toString() + ".jpg")
+                    if (f.exists()) {
+                        bmp = BitmapFactory.decodeStream(FileInputStream(f))
+                    } else {
+                        val url = URL(path)
+                        url.openConnection()
+                        bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                    }
+                } else {
+                    val url = URL(path)
+                    url.openConnection()
+                    bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                }
                 main.post {
                     images.put(id, bmp)
                     callback(bmp)
